@@ -71,4 +71,4 @@ _We encourage you to keep the code coverage percentage at 80% and above._
 
 ## [optional] What gif best describes this PR or how it makes you feel?
 
-![alt_text](gif_link)
+
