@@ -15,7 +15,7 @@ namespace QuanLyDKMonHocVaThuPhiSV
                     fonts.AddFont("OpenSans-Semibold.ttf", "OpenSansSemibold");
                 });
 
-            Console.WriteLine("Hello World!");
+
 #if DEBUG
             builder.Logging.AddDebug();
 #endif
