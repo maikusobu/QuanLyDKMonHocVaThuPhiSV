@@ -1,17 +1,3 @@
-
-name: build and test
-
-on:
-  push:
-  pull_request:
-    branches: [ main ]
-    paths-ignore:
-    - 'README.md'
-
-env:
-  DOTNET_VERSION: '8.0.x'
-
-
 jobs:
   build-and-test:
     name: build-and-test-${{matrix.os}}
@@ -23,27 +9,22 @@ jobs:
 
     - uses: actions/checkout@v2
 
-    
     - name: Setup .NET
       uses: actions/setup-dotnet@v1
       with:
         dotnet-version: ${{ env.DOTNET_VERSION }}
 
-   
+    - name: Install Workloads
+      run: dotnet workload install maui maui-ios maui-android maui-maccatalyst
+
     - name: Install dependencies
       run: dotnet restore
 
-  
-    - name: Install dotnet-format
-      run: dotnet tool install -g dotnet-format
-    - name: Install workload
-      run: dotnet workload install maui-android maui-ios maui-maccatalyst
     - name: format
       run: dotnet format --check
 
     - name: Build
-      run: dotnet build --configuration Release --no-restore\
+      run: dotnet build --configuration Release --no-restore
+
     - name: Test
       run: dotnet test --no-restore --verbosity normal
-
-    
