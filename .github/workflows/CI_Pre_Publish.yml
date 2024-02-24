@@ -34,13 +34,15 @@ jobs:
       run: dotnet restore
 
   
+    - name: Install dotnet-format
+      run: dotnet tool install -g dotnet-format
+    - name: Install workload
+      run: dotnet workload install maui-android maui-ios maui-maccatalyst
     - name: format
       run: dotnet format --check
 
     - name: Build
       run: dotnet build --configuration Release --no-restore\
-
-  
     - name: Test
       run: dotnet test --no-restore --verbosity normal
 
