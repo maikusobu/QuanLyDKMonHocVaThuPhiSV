@@ -1,4 +1,4 @@
-name: build-and-test
+name: format-build-and-test
 
 on:
   push:
@@ -6,12 +6,11 @@ on:
     branches: [main]
 
 env:
-  DOTNET_VERSION: '6.0.401'
+  DOTNET_VERSION: '8.0.x'
 
 jobs:
-  build-and-test:
-
-    name: build-and-test-${{ matrix.os }}
+  build:
+    name: build-${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -32,11 +31,32 @@ jobs:
     - name: Build
       run: dotnet build --configuration Release --no-restore
 
+  test:
+    needs: build
+    name: test-${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macOS-latest]
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+
+    - name: Setup .NET Core
+      uses: actions/setup-dotnet@v1
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+
     - name: Test
       run: dotnet test --no-restore --verbosity normal
 
-    - name: Setup Android (only for non-Windows)
-      if: matrix.os != 'windows-latest'
+  setup-android:
+    if: matrix.os != 'windows-latest'
+    name: setup-android-${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    steps:
+    - name: Setup Android
       run: |
         sudo apt-get install -y openjdk-11-jdk
         export JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
@@ -46,12 +66,26 @@ jobs:
         echo 'y' | $ANDROID_SDK_ROOT/cmdline-tools/bin/sdkmanager --sdk_root=$ANDROID_SDK_ROOT "platform-tools" "build-tools;31.0.0" "platforms;android-31"
         echo 'export PATH=$PATH:$ANDROID_SDK_ROOT/platform-tools' >> $GITHUB_ENV
 
-    - name: Setup Xcode (only for macOS)
-      if: matrix.os == 'macOS-latest'
+  setup-xcode:
+    if: matrix.os == 'macOS-latest'
+    name: setup-xcode-${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    steps:
+    - name: Setup Xcode
       run: sudo xcode-select --switch /Applications/Xcode_13.app/Contents/Developer
 
+  build-maui:
+    needs: [build, setup-android, setup-xcode]
+    name: build-maui-${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    steps:
     - name: Build MAUI project
       run: dotnet build -t:restore -t:build -p:Platform=AnyCPU -p:Configuration=Release
 
+  test-maui:
+    needs: build-maui
+    name: test-maui-${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    steps:
     - name: Test MAUI project
       run: dotnet test -c Release
