@@ -1,33 +1,57 @@
-name: build and test
+name: build-and-test
 
 on:
   push:
   pull_request:
-    branches: [ main ]
+    branches: [main]
+
 env:
-  DOTNET_VERSION: '6.0.401' 
+  DOTNET_VERSION: '6.0.401'
 
 jobs:
   build-and-test:
 
-    name: build-and-test-${{matrix.os}}
+    name: build-and-test-${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macOS-latest]
 
     steps:
-    - uses: actions/checkout@v3
+    - name: Checkout repository
+      uses: actions/checkout@v2
+
     - name: Setup .NET Core
-      uses: actions/setup-dotnet@v3
+      uses: actions/setup-dotnet@v1
       with:
         dotnet-version: ${{ env.DOTNET_VERSION }}
 
     - name: Install dependencies
       run: dotnet restore
-      
+
     - name: Build
       run: dotnet build --configuration Release --no-restore
-    
+
     - name: Test
       run: dotnet test --no-restore --verbosity normal
+
+    - name: Setup Android (only for non-Windows)
+      if: matrix.os != 'windows-latest'
+      run: |
+        sudo apt-get install -y openjdk-11-jdk
+        export JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
+        export ANDROID_SDK_ROOT=$HOME/android-sdk
+        wget https://dl.google.com/android/repository/commandlinetools-linux-7302050_latest.zip
+        unzip commandlinetools-linux-7302050_latest.zip -d $ANDROID_SDK_ROOT
+        echo 'y' | $ANDROID_SDK_ROOT/cmdline-tools/bin/sdkmanager --sdk_root=$ANDROID_SDK_ROOT "platform-tools" "build-tools;31.0.0" "platforms;android-31"
+        echo 'export PATH=$PATH:$ANDROID_SDK_ROOT/platform-tools' >> $GITHUB_ENV
+
+    - name: Setup Xcode (only for macOS)
+      if: matrix.os == 'macOS-latest'
+      run: sudo xcode-select --switch /Applications/Xcode_13.app/Contents/Developer
+
+    - name: Build MAUI project
+      run: dotnet build -t:restore -t:build -p:Platform=AnyCPU -p:Configuration=Release
+
+    - name: Test MAUI project
+      run: dotnet test -c Release
